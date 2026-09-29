@@ -1,0 +1,151 @@
+name: Publish App
+
+on:
+  workflow_call:
+    inputs:
+      app:
+        description: App directory to build and publish.
+        required: true
+        type: string
+      revision:
+        description: Immutable MeshBridge revision validated by the sync workflow.
+        required: true
+        type: string
+
+env:
+  ARCHITECTURES: '["amd64", "aarch64"]'
+
+jobs:
+  prepare:
+    name: Prepare ${{ inputs.app }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: read
+    outputs:
+      image: ${{ steps.metadata.outputs.image }}
+      image_name: ${{ steps.image.outputs.image_name }}
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      registry_prefix: ${{ steps.image.outputs.registry_prefix }}
+      version: ${{ steps.metadata.outputs.version }}
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0, Node 24
+        with:
+          ref: ${{ inputs.revision }}
+      - id: metadata
+        name: Read App publication metadata
+        run: python scripts/app_metadata.py "${{ inputs.app }}"
+      - name: Refuse to overwrite an existing release tag
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IMAGE: ${{ steps.metadata.outputs.image }}
+          VERSION: ${{ steps.metadata.outputs.version }}
+        run: |
+          printf '%s' "$GITHUB_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          if docker manifest inspect "${IMAGE}:${VERSION}" >/dev/null 2>&1; then
+            echo "::error::Refusing to overwrite an existing immutable release tag: ${IMAGE}:${VERSION}"
+            exit 1
+          fi
+      - id: image
+        name: Split image name
+        env:
+          APP_IMAGE: ${{ steps.metadata.outputs.image }}
+        run: |
+          echo "image_name=${APP_IMAGE##*/}" >> "$GITHUB_OUTPUT"
+          echo "registry_prefix=${APP_IMAGE%/*}" >> "$GITHUB_OUTPUT"
+      - id: matrix
+        name: Prepare multi-architecture build matrix
+        uses: home-assistant/builder/actions/prepare-multi-arch-matrix@4de35182ce1e329181bffcbcc84d33db5e2c7e10 # 2026.06.0
+        with:
+          architectures: ${{ env.ARCHITECTURES }}
+          image-name: ${{ steps.image.outputs.image_name }}
+          registry-prefix: ${{ steps.image.outputs.registry_prefix }}
+
+  build:
+    name: Build ${{ matrix.arch }} ${{ inputs.app }}
+    needs: prepare
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+      id-token: write
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0, Node 24
+        with:
+          persist-credentials: false
+          ref: ${{ inputs.revision }}
+      - name: Build and publish architecture image
+        uses: home-assistant/builder/actions/build-image@4de35182ce1e329181bffcbcc84d33db5e2c7e10 # 2026.06.0
+        with:
+          arch: ${{ matrix.arch }}
+          container-registry-password: ${{ secrets.GITHUB_TOKEN }}
+          context: ./${{ inputs.app }}
+          image: ${{ matrix.image }}
+          image-tags: ${{ needs.prepare.outputs.version }}
+          labels: |
+            io.hass.type=app
+          push: true
+          version: ${{ needs.prepare.outputs.version }}
+      - name: Verify published ${{ matrix.arch }} image
+        shell: bash
+        env:
+          ARCHITECTURE_IMAGE: ${{ matrix.image }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          printf '%s' "$GITHUB_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          reference="${ARCHITECTURE_IMAGE}:${VERSION}"
+          inspection="$(docker buildx imagetools inspect "$reference")"
+          printf '%s\n' "$inspection"
+          digest="$(awk '/^[[:space:]]*Digest:/ { print $2; exit }' <<< "$inspection")"
+          if [[ ! "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "::error::Published architecture image did not resolve to an OCI digest: $reference"
+            exit 1
+          fi
+          echo "Verified $reference at $digest"
+
+  manifest:
+    name: Publish multi-architecture ${{ inputs.app }}
+    needs: [prepare, build]
+    runs-on: ubuntu-24.04
+    permissions:
+      id-token: write
+      packages: write
+    steps:
+      - name: Publish multi-architecture manifest
+        uses: home-assistant/builder/actions/publish-multi-arch-manifest@4de35182ce1e329181bffcbcc84d33db5e2c7e10 # 2026.06.0
+        with:
+          architectures: ${{ env.ARCHITECTURES }}
+          container-registry-password: ${{ secrets.GITHUB_TOKEN }}
+          image-name: ${{ needs.prepare.outputs.image_name }}
+          image-tags: ${{ needs.prepare.outputs.version }}
+          registry-prefix: ${{ needs.prepare.outputs.registry_prefix }}
+      - name: Verify public release manifest
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IMAGE: ${{ needs.prepare.outputs.image }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          printf '%s' "$GITHUB_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          reference="${IMAGE}:${VERSION}"
+          inspection="$(docker buildx imagetools inspect "$reference")"
+          printf '%s\n' "$inspection"
+          digest="$(awk '/^[[:space:]]*Digest:/ { print $2; exit }' <<< "$inspection")"
+          if [[ ! "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "::error::Published release image did not resolve to an OCI digest: $reference"
+            exit 1
+          fi
+          raw_manifest="$(docker buildx imagetools inspect --raw "$reference")"
+          printf '%s\n' "$raw_manifest" | jq -e '
+            (.manifests // []) as $manifests
+            | ([ $manifests[] | select(.platform.os == "linux" and .platform.architecture == "amd64") ] | length >= 1)
+            and ([ $manifests[] | select(.platform.os == "linux" and .platform.architecture == "arm64") ] | length >= 1)
+          ' >/dev/null
+          docker logout ghcr.io
+          docker buildx imagetools inspect "$reference"
+          echo "Verified public multi-platform release $reference at $digest (linux/amd64 and linux/arm64)"

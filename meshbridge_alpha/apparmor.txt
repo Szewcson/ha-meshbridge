@@ -1,0 +1,67 @@
+# Custom profile for the MeshBridge App. Hardware access is limited to the
+# raw USB nodes supplied by `usb: true`; no host filesystems are mapped.
+#include <tunables/global>
+
+profile meshbridge_alpha flags=(attach_disconnected,mediate_deleted) {
+  #include <abstractions/base>
+
+  capability setuid,
+  capability setgid,
+  network inet stream,
+  network inet6 stream,
+  network netlink raw,
+  # Native meshtasticd probes Bluetooth even though this App has no supported
+  # Bluetooth transport. Keep the default denial explicit and non-audited.
+  deny network bluetooth raw,
+
+  # Home Assistant launches this script via /bin/sh, so the interpreter needs
+  # read permission in addition to inherited execution.
+  /run.sh rix,
+  /bin/busybox ix,
+  /bin/sh ix,
+  /usr/bin/meshtasticd ix,
+  # Alpine's python3 command resolves to a versioned executable.  Permit only
+  # that interpreter family, still under this AppArmor profile.
+  /usr/bin/python3* rix,
+  /usr/local/bin/ r,
+  # This is a Python script, so its interpreter must be able to read it.
+  /usr/local/bin/meshbridge-listener-ready rix,
+  /usr/local/lib/ r,
+  # Python must read the package directory while resolving its module path.
+  /usr/local/lib/meshbridge_app/ r,
+  /usr/local/lib/meshbridge_app/** r,
+
+  /usr/lib/ r,
+  /usr/lib/** mr,
+  /lib/ r,
+  /lib/** mr,
+  /etc/ld-musl-*.path r,
+  /etc/meshtasticd/** r,
+  /etc/meshbridge-release r,
+  /etc/passwd r,
+  /etc/group r,
+  /etc/resolv.conf r,
+
+  /run/{,**} rwk,
+  /tmp/** rwk,
+  /data/ r,
+  /data/** rwk,
+  /dev/ r,
+  /dev/null rw,
+  /dev/urandom r,
+  /dev/bus/usb/ r,
+  /dev/bus/usb/** rw,
+  /sys/bus/usb/devices/ r,
+  /sys/bus/usb/devices/** r,
+  /sys/devices/**/busnum r,
+  /sys/devices/**/devnum r,
+  /sys/devices/**/speed r,
+  /sys/devices/**/descriptors r,
+  # In a container /proc/net resolves to the current namespace's PID path.
+  /proc/*/net/tcp r,
+  /proc/*/net/tcp6 r,
+  /proc/*/mounts r,
+  /proc/version_signature r,
+
+  signal (send, receive) set=(term, int, kill, hup, cont),
+}

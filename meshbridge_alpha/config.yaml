@@ -1,0 +1,51 @@
+name: MeshBridge Alpha
+version: "1.0.0"
+slug: meshbridge_alpha
+description: Independent Home Assistant App wrapper for the Meshtastic meshtasticd daemon.
+url: https://github.com/Szewcson/ha-meshbridge
+image: ghcr.io/szewcson/meshbridge-alpha
+startup: services
+init: false
+stage: experimental
+arch:
+  - amd64
+  - aarch64
+
+# No port is published on the HAOS host. These null entries make the intent
+# explicit while preserving the internal container listener for HA Core.
+ports:
+  4403/tcp: null
+
+host_network: false
+full_access: false
+usb: true
+udev: true
+apparmor: true
+hassio_api: false
+homeassistant_api: false
+docker_api: false
+privileged: []
+
+options:
+  usb_selector: serial
+  usb_serial: ""
+  log_level: info
+  hardware:
+    mode: profile
+    profile: ""
+    auto_detect: false
+    overrides_yaml: ""
+    config: ""
+
+# The two free-form YAML fields preserve arbitrary hardware settings while the
+# surrounding schema ensures Home Assistant saves the configuration reliably.
+schema:
+  usb_selector: list(serial|unique_serialless)
+  usb_serial: str
+  log_level: list(trace|debug|info|warning|error)
+  hardware:
+    mode: list(profile|custom|customized_profile)
+    profile: str
+    auto_detect: bool
+    overrides_yaml: str
+    config: str

@@ -1,0 +1,13 @@
+configuration:
+  usb_selector:
+    name: USB selector
+    description: Select by exact USB serial, or only one serial-less device.
+  usb_serial:
+    name: USB serial number
+    description: Required for serial selection and must exactly match Lora.USB_Serialnum in the resolved profile.
+  log_level:
+    name: Log level
+    description: Logging verbosity for the MeshBridge wrapper and meshtasticd.
+  hardware:
+    name: Hardware configuration
+    description: Generic meshtasticd hardware mapping. Use profile, custom, or customized_profile mode.

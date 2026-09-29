@@ -1,0 +1,59 @@
+#!/usr/bin/python3
+"""Inspect the current network namespace for the upstream TCP listener."""
+
+from __future__ import annotations
+
+import ipaddress
+import sys
+from collections.abc import Iterator
+from pathlib import Path
+
+
+API_PORT = 4403
+LISTEN_STATE = "0A"
+
+
+def _display_address(address_hex: str, family: str) -> str:
+    """Convert a kernel /proc local-address field without accepting input."""
+
+    packed = bytes.fromhex(address_hex)
+    if family == "IPv4":
+        return str(ipaddress.IPv4Address(packed[::-1]))
+    return str(ipaddress.IPv6Address(packed))
+
+
+def _listeners(path: Path, family: str) -> Iterator[str]:
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()[1:]
+    except OSError:
+        return
+
+    for line in lines:
+        parts = line.split()
+        if len(parts) <= 3 or parts[3] != LISTEN_STATE:
+            continue
+        try:
+            address_hex, port_hex = parts[1].rsplit(":", 1)
+            if int(port_hex, 16) != API_PORT:
+                continue
+            address = _display_address(address_hex, family)
+        except ValueError:
+            continue
+        yield f"{family} {address}:{API_PORT}"
+
+
+def main(arguments: list[str]) -> int:
+    if arguments not in ([], ["--describe"]):
+        print("usage: meshbridge-listener-ready [--describe]", file=sys.stderr)
+        return 64
+
+    found = False
+    for path, family in ((Path("/proc/net/tcp"), "IPv4"), (Path("/proc/net/tcp6"), "IPv6")):
+        for listener in _listeners(path, family):
+            found = True
+            if arguments:
+                print(listener)
+    return 0 if found else 1
+
+
+raise SystemExit(main(sys.argv[1:]))
