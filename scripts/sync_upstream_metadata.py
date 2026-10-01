@@ -136,6 +136,12 @@ COPY run.sh /run.sh
 RUN chmod 0755 /run.sh /usr/local/bin/meshbridge-listener-ready \\
     && chmod 0644 /usr/local/lib/meshbridge_app/*.py
 
+# The upstream Alpine image has `HEALTHCHECK NONE`, which is represented in
+# Docker metadata as a non-empty object. Home Assistant Supervisor therefore
+# waits for it forever. Replace it with a local, AppArmor-permitted readiness
+# test for the daemon API listener.
+HEALTHCHECK --interval=5s --timeout=2s --start-period=35s --retries=3 CMD ["/usr/local/bin/meshbridge-listener-ready"]
+
 CMD [ "/run.sh" ]
 '''
 

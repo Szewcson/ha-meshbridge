@@ -1,0 +1,49 @@
+name: Publish MeshBridge maintenance release
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Select publish to create the versioned Alpha and Beta maintenance release images.
+        required: true
+        default: cancel
+        type: choice
+        options:
+          - cancel
+          - publish
+
+permissions:
+  contents: read
+  id-token: write
+  packages: write
+
+concurrency:
+  group: meshbridge-maintenance-release
+  cancel-in-progress: false
+
+jobs:
+  validate-confirmation:
+    name: Confirm maintenance release publication
+    if: github.event.inputs.confirmation != 'publish'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Explain how to start publication
+        run: |
+          echo "::error::This workflow is guarded. Select 'publish' in the confirmation menu, then run it again."
+          exit 1
+
+  publish-beta:
+    if: github.event.inputs.confirmation == 'publish'
+    uses: ./.github/workflows/publish-app.yaml
+    with:
+      app: meshbridge_beta
+      revision: ${{ github.sha }}
+    secrets: inherit
+
+  publish-alpha:
+    if: github.event.inputs.confirmation == 'publish'
+    uses: ./.github/workflows/publish-app.yaml
+    with:
+      app: meshbridge_alpha
+      revision: ${{ github.sha }}
+    secrets: inherit

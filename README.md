@@ -34,6 +34,10 @@ the new GHCR namespace only when those immutable tags do not already exist.
 This is deliberately separate from upstream synchronization: the scheduled
 workflow must not rebuild or republish unchanged upstream digests.
 
+For a versioned wrapper-only fix, use **Actions → Publish MeshBridge
+maintenance release** and select `publish`. It retains the same immutable-tag
+and multi-architecture verification safeguards.
+
 The daemon’s Stream API is available only on the internal App network at TCP
 port `4403`. MeshBridge does not install a web frontend or configure port 9443;
 the Home Assistant Meshtastic integration’s web client must use its own proxy.

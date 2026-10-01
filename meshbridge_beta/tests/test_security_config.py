@@ -38,6 +38,7 @@ def test_official_upstream_image_is_pinned_directly_in_dockerfile() -> None:
     )
     assert "PYTHONSAFEPATH=1" in dockerfile
     assert "PYTHONDONTWRITEBYTECODE=1" in dockerfile
+    assert 'HEALTHCHECK --interval=5s --timeout=2s --start-period=35s --retries=3 CMD ["/usr/local/bin/meshbridge-listener-ready"]' in dockerfile
 
 
 def test_apparmor_is_custom_and_has_no_global_write_rule() -> None:

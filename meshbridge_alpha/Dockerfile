@@ -3,7 +3,7 @@
 FROM meshtastic/meshtasticd:2.8.0.47db0e3-alpha-alpine@sha256:d026a6023cfbdfbb3e8cd46800135913aceee1014226fd29651cde0a5b2ad66d
 
 ARG BUILD_ARCH=amd64
-ARG MESHBRIDGE_VERSION=1.0.0
+ARG MESHBRIDGE_VERSION=1.0.1
 ARG UPSTREAM_MESHTASTICD_VERSION=2.8.0.47db0e3
 ARG UPSTREAM_MESHTASTICD_TAG=2.8.0.47db0e3-alpha-alpine
 ARG UPSTREAM_MESHTASTICD_DIGEST=sha256:d026a6023cfbdfbb3e8cd46800135913aceee1014226fd29651cde0a5b2ad66d
@@ -46,5 +46,11 @@ COPY run.sh /run.sh
 
 RUN chmod 0755 /run.sh /usr/local/bin/meshbridge-listener-ready \
     && chmod 0644 /usr/local/lib/meshbridge_app/*.py
+
+# The upstream Alpine image has `HEALTHCHECK NONE`, which is represented in
+# Docker metadata as a non-empty object. Home Assistant Supervisor therefore
+# waits for it forever. Replace it with a local, AppArmor-permitted readiness
+# test for the daemon API listener.
+HEALTHCHECK --interval=5s --timeout=2s --start-period=35s --retries=3 CMD ["/usr/local/bin/meshbridge-listener-ready"]
 
 CMD [ "/run.sh" ]

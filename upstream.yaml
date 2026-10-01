@@ -6,7 +6,7 @@ required_platforms:
 channels:
   beta:
     app_directory: meshbridge_beta
-    app_version: 1.0.0
+    app_version: 1.0.1
     image: meshtastic/meshtasticd
     discovery_tag: beta-alpine
     pinned_tag: 2.7.26.54e0d8d-beta-alpine
@@ -16,7 +16,7 @@ channels:
     source_url: https://github.com/meshtastic/firmware/releases/tag/v2.7.26.54e0d8d
   alpha:
     app_directory: meshbridge_alpha
-    app_version: 1.0.0
+    app_version: 1.0.1
     image: meshtastic/meshtasticd
     discovery_tag: alpha-alpine
     pinned_tag: 2.8.0.47db0e3-alpha-alpine

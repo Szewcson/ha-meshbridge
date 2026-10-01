@@ -95,6 +95,26 @@ if ! printf '%s\n' "$listener_description" | grep -Fx "IPv4 0.0.0.0:4403" >/dev/
     echo "simulated daemon did not bind the internal TCP API to all IPv4 interfaces" >&2
     exit 1
 fi
+
+# Docker represents the inherited HEALTHCHECK NONE sentinel as non-empty image
+# metadata. Supervisor mistakes that sentinel for a real check and leaves the
+# App in startup forever. The replacement check must become healthy while the
+# exact AppArmor profile is active.
+health_status=""
+health_attempt=0
+while [ "$health_attempt" -lt 9 ]; do
+    health_status=$(sudo -n docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{end}}' "$sim_container_name")
+    if [ "$health_status" = "healthy" ]; then
+        break
+    fi
+    sleep 5
+    health_attempt=$((health_attempt + 1))
+done
+if [ "$health_status" != "healthy" ]; then
+    sudo -n docker inspect --format '{{json .State.Health}}' "$sim_container_name" >&2
+    echo "listener health check did not become healthy under AppArmor: ${health_status:-missing}" >&2
+    exit 1
+fi
 sudo -n docker rm -f "$sim_container_name" >/dev/null
 
 new_denials=$(sudo -n dmesg --color=never | tail -n "+$((audit_baseline + 1))" \

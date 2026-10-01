@@ -155,6 +155,7 @@ def check_channel(channel: str, metadata: dict[str, Any], errors: list[str]) -> 
         f'io.meshbridge.upstream.digest="${{UPSTREAM_MESHTASTICD_DIGEST}}"',
         f'io.meshbridge.upstream.source="${{UPSTREAM_SOURCE_URL}}"',
         f'ARG MESHBRIDGE_VERSION={metadata["app_version"]}',
+        'HEALTHCHECK --interval=5s --timeout=2s --start-period=35s --retries=3 CMD ["/usr/local/bin/meshbridge-listener-ready"]',
     )
     for label in required_labels:
         if label not in dockerfile:
