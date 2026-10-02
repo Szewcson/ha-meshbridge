@@ -19,7 +19,6 @@ jobs:
   prepare:
     name: Prepare ${{ inputs.app }}
     runs-on: ubuntu-24.04
-    environment: meshbridge-release
     permissions:
       contents: read
       packages: read

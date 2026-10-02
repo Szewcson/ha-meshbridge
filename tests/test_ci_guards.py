@@ -97,7 +97,9 @@ def test_release_workflows_keep_their_security_boundaries() -> None:
     assert "id-token: write" not in sync.split("jobs:", 1)[0]
     assert "PyYAML==6.0.2" in requirements
     assert "--hash=sha256:" in requirements
-    assert "environment: meshbridge-release" in publish
+    assert "environment: meshbridge-release" in (
+        REPOSITORY / ".github/workflows/publish-maintenance-release.yaml"
+    ).read_text(encoding="utf-8")
     assert "sigstore/cosign-installer@ba7bc0a3fef59531c69a25acd34668d6d3fe6f22" in publish
     assert "cosign sign --yes" in publish
     assert "cosign verify" in publish

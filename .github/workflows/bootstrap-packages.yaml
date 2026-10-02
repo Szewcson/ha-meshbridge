@@ -30,8 +30,17 @@ jobs:
           echo "::error::This workflow is guarded. Select 'publish' in the confirmation menu, then run it again."
           exit 1
 
+  approve-release:
+    name: Approve initial package publication
+    if: github.event.inputs.confirmation == 'publish'
+    runs-on: ubuntu-24.04
+    environment: meshbridge-release
+    steps:
+      - run: echo "Initial MeshBridge package publication approved."
+
   publish-beta:
     if: github.event.inputs.confirmation == 'publish'
+    needs: approve-release
     permissions:
       contents: read
       id-token: write
@@ -44,6 +53,7 @@ jobs:
 
   publish-alpha:
     if: github.event.inputs.confirmation == 'publish'
+    needs: approve-release
     permissions:
       contents: read
       id-token: write
