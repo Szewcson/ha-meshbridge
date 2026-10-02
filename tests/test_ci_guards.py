@@ -107,6 +107,7 @@ def test_release_workflows_keep_their_security_boundaries() -> None:
     assert "sigstore/cosign-installer@ba7bc0a3fef59531c69a25acd34668d6d3fe6f22" in publish
     assert "cosign sign --yes" in publish
     assert "cosign verify" in publish
+    assert "--certificate-identity='https://github.com/Szewcson/ha-meshbridge/.github/workflows/publish-app.yaml@refs/heads/main'" in publish
 
 
 def test_upstream_smoke_keeps_simulator_files_runner_owned() -> None:

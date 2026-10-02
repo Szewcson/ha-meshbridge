@@ -46,7 +46,7 @@ OIDC after their platforms and digest have been verified. With Cosign installed:
 ```sh
 cosign verify \
   --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
-  --certificate-identity-regexp='^https://github\.com/Szewcson/ha-meshbridge/' \
+  --certificate-identity='https://github.com/Szewcson/ha-meshbridge/.github/workflows/publish-app.yaml@refs/heads/main' \
   ghcr.io/szewcson/meshbridge-alpha:<version>
 ```
 
