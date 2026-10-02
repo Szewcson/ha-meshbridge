@@ -107,3 +107,13 @@ def test_release_workflows_keep_their_security_boundaries() -> None:
     assert "sigstore/cosign-installer@ba7bc0a3fef59531c69a25acd34668d6d3fe6f22" in publish
     assert "cosign sign --yes" in publish
     assert "cosign verify" in publish
+
+
+def test_upstream_smoke_keeps_simulator_files_runner_owned() -> None:
+    """The cleanup trap must not fail after a successful candidate test."""
+
+    smoke = (REPOSITORY / "scripts/smoke_upstream_candidate.sh").read_text(encoding="utf-8")
+    assert 'runner_uid=$(id -u)' in smoke
+    assert 'runner_gid=$(id -g)' in smoke
+    assert '--user "${runner_uid}:${runner_gid}"' in smoke
+    assert 'rm -rf -- "$test_directory" || echo "warning:' in smoke

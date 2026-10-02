@@ -12,13 +12,18 @@ versions_file=$2
 test_directory=$(mktemp -d)
 results_file=$(mktemp)
 container_names=""
+runner_uid=$(id -u)
+runner_gid=$(id -g)
 
 cleanup() {
     for container_name in $container_names; do
         docker rm -f "$container_name" >/dev/null 2>&1 || true
     done
-    rm -rf -- "$test_directory"
-    rm -f -- "$results_file"
+    # The simulator writes into a bind mount. Do not turn an otherwise valid
+    # candidate into a failed release merely because an image ignored the
+    # requested user or left an undeletable diagnostic file behind.
+    rm -rf -- "$test_directory" || echo "warning: could not remove $test_directory" >&2
+    rm -f -- "$results_file" || echo "warning: could not remove $results_file" >&2
 }
 trap cleanup EXIT HUP INT TERM
 
@@ -54,6 +59,7 @@ for channel in $changed_channels; do
 
     docker run -d --name "$container_name" \
         --entrypoint /usr/bin/meshtasticd \
+        --user "${runner_uid}:${runner_gid}" \
         -v "$channel_directory":/candidate \
         "$reference" \
         --config /candidate/runtime.yaml --fsdir /candidate/state --sim >/dev/null
