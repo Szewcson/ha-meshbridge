@@ -1,0 +1,8 @@
+# Enforce this file through a protected-main branch rule.
+/.github/workflows/ @Szewcson
+/scripts/ @Szewcson
+/upstream.yaml @Szewcson
+/meshbridge_alpha/Dockerfile @Szewcson
+/meshbridge_beta/Dockerfile @Szewcson
+/meshbridge_alpha/rootfs/ @Szewcson
+/meshbridge_beta/rootfs/ @Szewcson

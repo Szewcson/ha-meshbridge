@@ -32,6 +32,7 @@ jobs:
         run: |
           python -m pytest meshbridge_beta/tests
           python -m pytest meshbridge_alpha/tests
+          python -m pytest tests
       - name: Validate shell syntax
         run: |
           sh -n meshbridge_beta/run.sh

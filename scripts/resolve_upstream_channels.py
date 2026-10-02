@@ -18,7 +18,6 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 UPSTREAM_FILE = ROOT / "upstream.yaml"
 DOCKER_HUB_TAG = "https://hub.docker.com/v2/repositories/{image}/tags/{tag}"
-GITHUB_RELEASE = "https://api.github.com/repos/meshtastic/firmware/releases/tags/{tag}"
 MAX_RESPONSE_BYTES = 2 * 1024 * 1024
 DIGEST = re.compile(r"^sha256:[0-9a-f]{64}$")
 CHANNELS = ("alpha", "beta")
@@ -50,11 +49,6 @@ def load_upstream() -> dict[str, Any]:
     if not isinstance(loaded, dict) or not isinstance(loaded.get("channels"), dict):
         raise RuntimeError("upstream.yaml must contain a channels mapping")
     return loaded
-
-
-def revoked(release: dict[str, Any]) -> bool:
-    values = (release.get("name"), release.get("body"))
-    return any(isinstance(value, str) and "revoked" in value.casefold() for value in values)
 
 
 def required_platforms(tag: dict[str, Any]) -> set[str]:
@@ -89,10 +83,6 @@ def main() -> int:
             if discovery_tag != f"{channel}-alpine" or not DIGEST.fullmatch(digest):
                 raise RuntimeError(f"upstream.yaml {channel} has invalid discovery metadata")
 
-            current_release = fetch_json(GITHUB_RELEASE.format(tag=quote(source_tag)), f"GitHub {channel} release")
-            if current_release.get("draft") is True or revoked(current_release):
-                raise RuntimeError(f"currently pinned {channel} release {source_tag} is draft or revoked")
-
             tag = fetch_json(
                 DOCKER_HUB_TAG.format(image=image, tag=quote(discovery_tag, safe="")),
                 f"Docker Hub {channel} tag",
@@ -103,6 +93,12 @@ def main() -> int:
             platforms = required_platforms(tag)
             if not set(required).issubset(platforms):
                 raise RuntimeError(f"{channel} tag lacks required platforms: expected {required}, found {sorted(platforms)}")
+
+            # A release can be revoked after its immutable image has been
+            # recorded.  That must not prevent discovery of a replacement:
+            # the changed candidate is smoke-tested and its *own* GitHub
+            # release is validated by sync_upstream_metadata.py before any
+            # repository pin or public App image is updated.
             result["channels"][channel] = {
                 "channel": channel,
                 "image": image,

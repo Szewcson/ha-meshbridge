@@ -5,19 +5,54 @@ on:
     - cron: "23 */6 * * *"
   workflow_dispatch:
 
+# Discovery runs without write access. A detected update must pass the
+# meshbridge-release environment before a commit or package publication is
+# possible. Configure that environment with required reviewers and main-only
+# deployment branches as documented in SECURITY.md.
 permissions:
-  contents: write
-  id-token: write
-  packages: write
+  contents: read
 
 concurrency:
   group: meshbridge-upstream-release-sync
   cancel-in-progress: false
 
 jobs:
-  sync:
-    name: Resolve, verify, and record upstream digests
+  resolve:
+    name: Discover changed upstream image digests
     runs-on: ubuntu-24.04
+    outputs:
+      changed: ${{ steps.changed.outputs.value }}
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0, Node 24
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0, Node 24
+        with:
+          python-version: "3.12"
+      - name: Install locked metadata dependency
+        run: >-
+          python -m pip install --disable-pip-version-check --only-binary=:all:
+          --require-hashes --requirement .github/requirements/sync-requirements.txt
+      - name: Resolve independent mutable Alpha and Beta channel digests
+        run: python scripts/resolve_upstream_channels.py > "$RUNNER_TEMP/candidates.json"
+      - id: changed
+        name: Record whether an update requires review
+        run: |
+          if jq -e '[.channels[] | select(.changed)] | length > 0' "$RUNNER_TEMP/candidates.json" >/dev/null; then
+            echo "value=true" >> "$GITHUB_OUTPUT"
+            echo "## Upstream image update awaiting release approval" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "value=false" >> "$GITHUB_OUTPUT"
+            echo "No upstream image digest changed." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          jq -r '.channels[] | "- \(.channel): \(.digest) (changed=\(.changed))"' "$RUNNER_TEMP/candidates.json" >> "$GITHUB_STEP_SUMMARY"
+
+  sync:
+    name: Validate and record approved upstream digests
+    needs: resolve
+    if: needs.resolve.outputs.changed == 'true'
+    runs-on: ubuntu-24.04
+    environment: meshbridge-release
+    permissions:
+      contents: write
     outputs:
       changed: ${{ steps.changed.outputs.value }}
       revision: ${{ steps.revision.outputs.value }}
@@ -26,12 +61,14 @@ jobs:
       - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0, Node 24
         with:
           python-version: "3.12"
-      - name: Install metadata validator dependency
-        run: python -m pip install PyYAML
-      - name: Resolve independent mutable Alpha and Beta channel digests
+      - name: Install locked metadata dependency
+        run: >-
+          python -m pip install --disable-pip-version-check --only-binary=:all:
+          --require-hashes --requirement .github/requirements/sync-requirements.txt
+      - name: Resolve fresh candidate digests after approval
         run: python scripts/resolve_upstream_channels.py > "$RUNNER_TEMP/candidates.json"
       - id: changed
-        name: Stop when every upstream digest is unchanged
+        name: Stop if a concurrent publication already consumed the update
         run: |
           if jq -e '[.channels[] | select(.changed)] | length > 0' "$RUNNER_TEMP/candidates.json" >/dev/null; then
             echo "value=true" >> "$GITHUB_OUTPUT"
@@ -74,6 +111,10 @@ jobs:
   publish-beta:
     needs: sync
     if: needs.sync.outputs.changed == 'true'
+    permissions:
+      contents: read
+      id-token: write
+      packages: write
     uses: ./.github/workflows/publish-app.yaml
     with:
       app: meshbridge_beta
@@ -83,6 +124,10 @@ jobs:
   publish-alpha:
     needs: sync
     if: needs.sync.outputs.changed == 'true'
+    permissions:
+      contents: read
+      id-token: write
+      packages: write
     uses: ./.github/workflows/publish-app.yaml
     with:
       app: meshbridge_alpha

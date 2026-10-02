@@ -8,7 +8,7 @@ import logging
 import sys
 from pathlib import Path
 
-from meshbridge_app.app_state import StateError, ensure_current
+from meshbridge_app.app_state import StateError, ensure_current, startup_lock
 from meshbridge_app.hardware import ConfigurationError, generate_configuration, load_options
 from meshbridge_app.usb import pyusb_devices, select_usb_device
 
@@ -39,19 +39,20 @@ def main() -> int:
             for line in release.read_text(encoding="utf-8").splitlines():
                 if line.startswith(("app_version=", "upstream_version=")):
                     logging.info("%s", line.replace("=", ": ", 1))
-        state = ensure_current(arguments.data_dir)
-        generated = generate_configuration(
-            options,
-            arguments.available_dir,
-            arguments.data_dir,
-            state["mac_address"],
-        )
-        device = select_usb_device(
-            generated.prepared.resolved,
-            options.get("usb_selector"),
-            options.get("usb_serial", ""),
-            pyusb_devices,
-        )
+        with startup_lock(arguments.data_dir):
+            state = ensure_current(arguments.data_dir)
+            generated = generate_configuration(
+                options,
+                arguments.available_dir,
+                arguments.data_dir,
+                state["mac_address"],
+            )
+            device = select_usb_device(
+                generated.prepared.resolved,
+                options.get("usb_selector"),
+                options.get("usb_serial", ""),
+                pyusb_devices,
+            )
     except (ConfigurationError, StateError) as error:
         logging.error("Startup validation failed: %s", error)
         return 1

@@ -5,7 +5,7 @@ import re
 
 import pytest
 
-from meshbridge_app.app_state import SCHEMA_VERSION, StateError, ensure_current
+from meshbridge_app.app_state import SCHEMA_VERSION, StateError, ensure_current, startup_lock
 
 
 def test_new_state_is_created_atomically(tmp_path) -> None:
@@ -51,3 +51,10 @@ def test_unregistered_older_state_fails_without_rewrite(tmp_path) -> None:
     with pytest.raises(StateError, match="no migration"):
         ensure_current(tmp_path)
     assert path.read_text() == original
+
+
+def test_startup_lock_rejects_a_symlink(tmp_path) -> None:
+    (tmp_path / ".meshbridge-start.lock").symlink_to(tmp_path / "other")
+    with pytest.raises(StateError, match="cannot acquire startup lock"):
+        with startup_lock(tmp_path):
+            pass

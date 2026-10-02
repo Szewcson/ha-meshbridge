@@ -42,6 +42,10 @@ an exact serial before starting the daemon.
 The App has no host network, privileged capabilities, Docker API, Home
 Assistant API, or Supervisor API. It uses a dedicated AppArmor profile, raw USB
 access supplied by Home Assistant, and an internal-only TCP `4403` declaration.
+Raw USB is necessarily broader than the selected device: custom profiles and
+YAML overrides are trusted administrator configuration. See
+[SECURITY.md](../SECURITY.md) for the permission boundary and image verification
+steps.
 
 Meshtastic® is a registered trademark of Meshtastic LLC. Meshtastic software
 components are released under various licenses; see the upstream project for

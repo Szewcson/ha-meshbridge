@@ -49,6 +49,9 @@ The canonical immutable upstream pins and release-source links are in
 upstream daemon remains GPL-3.0-only. See [LICENSE](LICENSE) and
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
+See [SECURITY.md](SECURITY.md) for the raw-USB permission boundary, release
+approval setup, and Cosign verification of published images.
+
 Meshtastic® is a registered trademark of Meshtastic LLC. Meshtastic software
 components are released under various licenses; see the upstream project for
 details. No warranty is provided - use at your own risk.

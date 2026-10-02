@@ -6,11 +6,14 @@ state. This file is intentionally separate from the upstream daemon's VFS state.
 
 from __future__ import annotations
 
+import fcntl
 import json
 import os
 import re
 import secrets
 import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +23,27 @@ _MAC_ADDRESS = re.compile(r"^[0-9A-F]{12}$")
 
 class StateError(RuntimeError):
     """The persistent App state cannot safely be used."""
+
+
+@contextmanager
+def startup_lock(data_dir: Path) -> Iterator[None]:
+    """Serialize startup state and generated-config changes for one App data volume."""
+
+    lock_path = data_dir / ".meshbridge-start.lock"
+    flags = os.O_RDWR | os.O_CREAT | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+    descriptor: int | None = None
+    try:
+        data_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+        descriptor = os.open(lock_path, flags, 0o600)
+        fcntl.flock(descriptor, fcntl.LOCK_EX)
+    except OSError as error:
+        if descriptor is not None:
+            os.close(descriptor)
+        raise StateError(f"cannot acquire startup lock at {lock_path}: {error}") from error
+    try:
+        yield
+    finally:
+        os.close(descriptor)
 
 
 def _new_mac_address() -> str:

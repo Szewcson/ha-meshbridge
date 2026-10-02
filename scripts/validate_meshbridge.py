@@ -180,8 +180,8 @@ def main() -> int:
         if not isinstance(metadata, dict):
             fail(errors, f"upstream.yaml is missing the {channel} channel")
             continue
-    if metadata.get("app_directory") != CHANNELS[channel]["directory"]:
-        fail(errors, f"upstream.yaml {channel} App directory is incorrect")
+        if metadata.get("app_directory") != CHANNELS[channel]["directory"]:
+            fail(errors, f"upstream.yaml {channel} App directory is incorrect")
         if not re.fullmatch(r"\d+\.\d+\.\d+", str(metadata.get("app_version", ""))):
             fail(errors, f"upstream.yaml {channel} App version is invalid")
         check_channel(channel, metadata, errors)

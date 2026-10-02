@@ -14,8 +14,6 @@ on:
 
 permissions:
   contents: read
-  id-token: write
-  packages: write
 
 concurrency:
   group: meshbridge-maintenance-release
@@ -34,6 +32,10 @@ jobs:
 
   publish-beta:
     if: github.event.inputs.confirmation == 'publish'
+    permissions:
+      contents: read
+      id-token: write
+      packages: write
     uses: ./.github/workflows/publish-app.yaml
     with:
       app: meshbridge_beta
@@ -42,6 +44,10 @@ jobs:
 
   publish-alpha:
     if: github.event.inputs.confirmation == 'publish'
+    permissions:
+      contents: read
+      id-token: write
+      packages: write
     uses: ./.github/workflows/publish-app.yaml
     with:
       app: meshbridge_alpha

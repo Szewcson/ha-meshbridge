@@ -69,9 +69,10 @@ def bump_patch(version: str) -> str:
 
 
 def revoked(release: dict[str, Any]) -> bool:
-    return any(
-        isinstance(value, str) and "revoked" in value.casefold() for value in (release.get("name"), release.get("body"))
-    )
+    # Release notes may discuss a different revoked build. The release title
+    # is the canonical human-visible status for the release being validated.
+    name = release.get("name")
+    return isinstance(name, str) and "revoked" in name.casefold()
 
 
 def platforms(tag: dict[str, Any]) -> set[str]:
