@@ -109,6 +109,12 @@ def test_release_workflows_keep_their_security_boundaries() -> None:
     assert "cosign verify" in publish
     assert "--certificate-identity='https://github.com/Szewcson/ha-meshbridge/.github/workflows/publish-app.yaml@refs/heads/main'" in publish
 
+    recovery = (REPOSITORY / ".github/workflows/verify-existing-release.yaml").read_text(encoding="utf-8")
+    assert "Verify existing MeshBridge release" in recovery
+    assert "docker buildx imagetools inspect --raw" in recovery
+    assert "cosign verify" in recovery
+    assert "packages: read" in recovery
+
 
 def test_upstream_smoke_keeps_simulator_files_runner_owned() -> None:
     """The cleanup trap must not fail after a successful candidate test."""

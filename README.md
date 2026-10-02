@@ -38,6 +38,11 @@ For a versioned wrapper-only fix, use **Actions → Publish MeshBridge
 maintenance release** and select `publish`. It retains the same immutable-tag
 and multi-architecture verification safeguards.
 
+If an old publication run failed only after its immutable manifest was created,
+do not rebuild that version. Run **Actions → Verify existing MeshBridge
+release** with its channel and version instead; it verifies both platforms and
+the GitHub OIDC Cosign signature without changing any package.
+
 The daemon’s Stream API is available only on the internal App network at TCP
 port `4403`. MeshBridge does not install a web frontend or configure port 9443;
 the Home Assistant Meshtastic integration’s web client must use its own proxy.
