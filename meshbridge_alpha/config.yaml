@@ -1,5 +1,5 @@
 name: MeshBridge Alpha
-version: "1.0.1"
+version: "1.0.2"
 slug: meshbridge_alpha
 description: Independent Home Assistant App wrapper for the Meshtastic meshtasticd daemon.
 url: https://github.com/Szewcson/ha-meshbridge
