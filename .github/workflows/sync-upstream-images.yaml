@@ -55,6 +55,8 @@ jobs:
       contents: write
     outputs:
       changed: ${{ steps.changed.outputs.value }}
+      alpha_changed: ${{ steps.channels.outputs.alpha }}
+      beta_changed: ${{ steps.channels.outputs.beta }}
       revision: ${{ steps.revision.outputs.value }}
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0, Node 24
@@ -75,6 +77,16 @@ jobs:
           else
             echo "value=false" >> "$GITHUB_OUTPUT"
           fi
+      - id: channels
+        name: Select changed channel releases
+        run: |
+          for channel in alpha beta; do
+            if jq -e --arg channel "$channel" '.channels[$channel].changed == true' "$RUNNER_TEMP/candidates.json" >/dev/null; then
+              echo "$channel=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "$channel=false" >> "$GITHUB_OUTPUT"
+            fi
+          done
       - if: steps.changed.outputs.value == 'true'
         name: Smoke-test newly discovered immutable upstream images
         run: sh scripts/smoke_upstream_candidate.sh "$RUNNER_TEMP/candidates.json" "$RUNNER_TEMP/versions.json"
@@ -110,7 +122,7 @@ jobs:
 
   publish-beta:
     needs: sync
-    if: needs.sync.outputs.changed == 'true'
+    if: needs.sync.outputs.beta_changed == 'true'
     permissions:
       contents: read
       id-token: write
@@ -123,7 +135,7 @@ jobs:
 
   publish-alpha:
     needs: sync
-    if: needs.sync.outputs.changed == 'true'
+    if: needs.sync.outputs.alpha_changed == 'true'
     permissions:
       contents: read
       id-token: write

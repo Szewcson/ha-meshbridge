@@ -94,6 +94,10 @@ def test_release_workflows_keep_their_security_boundaries() -> None:
     assert "environment: meshbridge-release" in sync
     assert "--require-hashes" in sync
     assert "contents: write" in sync
+    assert "alpha_changed: ${{ steps.channels.outputs.alpha }}" in sync
+    assert "beta_changed: ${{ steps.channels.outputs.beta }}" in sync
+    assert "needs.sync.outputs.alpha_changed == 'true'" in sync
+    assert "needs.sync.outputs.beta_changed == 'true'" in sync
     assert "id-token: write" not in sync.split("jobs:", 1)[0]
     assert "PyYAML==6.0.2" in requirements
     assert "--hash=sha256:" in requirements
