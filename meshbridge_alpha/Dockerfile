@@ -1,13 +1,13 @@
 # syntax=docker/dockerfile:1
 # Generated from upstream.yaml; validate with scripts/validate_meshbridge.py.
-FROM meshtastic/meshtasticd:2.8.2.4c89b69-alpha-alpine@sha256:55c2c14843ff1f7d347f320155cd8dcea735155b10ad357c8f0bff25fa66d2d6
+FROM meshtastic/meshtasticd:2.8.2.d5f1619-alpha-alpine@sha256:8a54d0b3693fcaf6c02ab9d13653aaeabe578bce9dcb81ea8f0261129b6fbf0d
 
 ARG BUILD_ARCH=amd64
-ARG MESHBRIDGE_VERSION=1.0.3
-ARG UPSTREAM_MESHTASTICD_VERSION=2.8.2.4c89b69
-ARG UPSTREAM_MESHTASTICD_TAG=2.8.2.4c89b69-alpha-alpine
-ARG UPSTREAM_MESHTASTICD_DIGEST=sha256:55c2c14843ff1f7d347f320155cd8dcea735155b10ad357c8f0bff25fa66d2d6
-ARG UPSTREAM_SOURCE_URL=https://github.com/meshtastic/firmware/releases/tag/v2.8.2.4c89b69
+ARG MESHBRIDGE_VERSION=1.0.4
+ARG UPSTREAM_MESHTASTICD_VERSION=2.8.2.d5f1619
+ARG UPSTREAM_MESHTASTICD_TAG=2.8.2.d5f1619-alpha-alpine
+ARG UPSTREAM_MESHTASTICD_DIGEST=sha256:8a54d0b3693fcaf6c02ab9d13653aaeabe578bce9dcb81ea8f0261129b6fbf0d
+ARG UPSTREAM_SOURCE_URL=https://github.com/meshtastic/firmware/releases/tag/v2.8.2.d5f1619
 
 ENV PYTHONSAFEPATH=1 \
     PYTHONDONTWRITEBYTECODE=1
